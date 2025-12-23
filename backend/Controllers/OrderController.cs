@@ -1,4 +1,5 @@
-using backend.Models;
+﻿using backend.Models;
+using backend.Repositories;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,86 +10,69 @@ namespace backend.Controllers
     [EnableCors("_myAllowSpecificOrigins")]
     public class OrderController : ControllerBase
     {
-        // TEMP: In‑memory demo data instead of DB
-        private static readonly List<Order> _demoOrders = new()
-        {
-            new Order { Id = 1, UserId = 1, Total = 100, Status = "Demo order 1" },
-            new Order { Id = 2, UserId = 1, Total = 250, Status = "Demo order 2" },
-            new Order { Id = 3, UserId = 2, Total = 500, Status = "Demo order 3" }
-        };
+        private readonly IListRepository<Order> _orderRepository;
 
-        public OrderController()
+        public OrderController(IListRepository<Order> orderRepo)
         {
-            // Empty constructor – no repository needed for now
+            _orderRepository = orderRepo;
         }
 
-        // GET api/Order
         [HttpGet]
         public IActionResult Get()
         {
-            // Returns all demo orders
-            return Ok(_demoOrders);
-        }
-
-        // GET api/Order/1  (by userId)
-        [HttpGet("{userId}")]
-        public IActionResult Get(int userId)
-        {
-            var orders = _demoOrders.Where(o => o.UserId == userId).ToList();
-            if (orders.Count == 0)
-            {
-                return NotFound();
-            }
-
+            IEnumerable<Order> orders = _orderRepository.GetAll();
             return Ok(orders);
         }
 
-        // POST api/Order
+        [HttpGet("{userId}")]
+        public IActionResult Get(int userId)
+        {
+            var orders = _orderRepository.GetById(userId);
+            if (orders == null)
+            {
+                return NotFound();
+            }
+            return Ok(orders);
+        }
+
         [HttpPost]
         public IActionResult Post(Order newOrder)
         {
-            if (newOrder == null)
+            bool added = _orderRepository.Add(newOrder);
+            if (!added)
             {
-                return BadRequest("Order is required");
+                return BadRequest("Failed to create Order");
             }
 
-            // Simple in‑memory add for demo
-            newOrder.Id = _demoOrders.Count == 0 ? 1 : _demoOrders.Max(o => o.Id) + 1;
-            _demoOrders.Add(newOrder);
-
-            return Ok(newOrder);
+            return Ok();
         }
 
-        // PUT api/Order/5
         [HttpPut("{orderId}")]
-        public IActionResult Put(int orderId, Order updatedOrder)
+        public IActionResult Put(Order updatedOrder)
         {
-            var existing = _demoOrders.FirstOrDefault(o => o.Id == orderId);
-            if (existing == null)
+            bool updated = _orderRepository.Update(updatedOrder);
+            if (updated)
+            {
+                return Ok();
+            }
+            else
             {
                 return NotFound();
             }
-
-            // Update basic fields for demo
-            existing.UserId = updatedOrder.UserId;
-            existing.Total = updatedOrder.Total;
-            existing.Status = updatedOrder.Status;
-
-            return Ok(existing);
         }
 
-        // DELETE api/Order/5
         [HttpDelete("{orderId}")]
         public IActionResult Delete(int orderId)
         {
-            var existing = _demoOrders.FirstOrDefault(o => o.Id == orderId);
-            if (existing == null)
+            bool deleted = _orderRepository.Delete(orderId);
+            if (deleted)
+            {
+                return Ok();
+            }
+            else
             {
                 return NotFound();
             }
-
-            _demoOrders.Remove(existing);
-            return Ok();
         }
     }
 }
