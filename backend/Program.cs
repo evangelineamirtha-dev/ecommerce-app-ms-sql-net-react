@@ -49,7 +49,7 @@ namespace backend
                 app.UseSwaggerUI();
             }
 
-            app.UseCors("_myAllowSpecificOrigins");
+            app.UseCors(MyAllowSpecificOrigins);
 
             app.UseHttpsRedirection();
 
